@@ -294,8 +294,8 @@ export default function ChatbotPage() {
 
             {/* Messages */}
             <CardContent className="flex-1 p-0">
-              <ScrollArea className="h-full p-4">
-                <div className="space-y-4">
+              <ScrollArea className="h-96 p-4 overflow-y-auto">
+                <div className="space-y-4 ">
                   <AnimatePresence>
                     {messages.map((message) => (
                       <motion.div

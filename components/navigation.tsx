@@ -25,7 +25,7 @@ export function Navigation({ userRole }: NavigationProps) {
   const refugeeNavItems = [
     { href: "/dashboard/refugee", label: "Dashboard", icon: Home },
     { href: "/chatbot", label: "AI Assistant", icon: MessageCircle },
-    { href: "/symptom-checker", label: "Symptom Checker", icon: User },
+    // { href: "/symptom-checker", label: "Symptom Checker", icon: User },
     { href: "/map", label: "Find Services", icon: MapPin },
     { href: "/health-hub", label: "Health Education", icon: BookOpen },
   ]
