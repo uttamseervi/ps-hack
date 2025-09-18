@@ -16,7 +16,7 @@ export async function POST(request: Request) {
                 { status: 400 }
             );
         }
-
+        console.log("the data", formData)
         // Email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(formData.email)) {
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
             .select('id')
             .eq('email', formData.email)
             .maybeSingle();
-            
+
         if (userCheckError) {
             console.error('User check error:', userCheckError);
             throw userCheckError;
@@ -74,13 +74,13 @@ export async function POST(request: Request) {
             }])
             .select()
             .single();
-
+        console.log("the userData is ", userData)
         if (userError) {
             console.error('User creation error:', userError);
             return NextResponse.json(
-                { 
+                {
                     error: 'Failed to create user',
-                    details: userError.message 
+                    details: userError.message
                 },
                 { status: 500 }
             );
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
 
         if (refugeeError) {
             console.error('Refugee profile creation error:', refugeeError);
-            
+
             // Cleanup: Delete the user record if refugee profile creation failed
             await supabase
                 .from('users')
@@ -118,9 +118,9 @@ export async function POST(request: Request) {
                 .eq('id', userData.id);
 
             return NextResponse.json(
-                { 
+                {
                     error: 'Failed to create refugee profile',
-                    details: refugeeError.message 
+                    details: refugeeError.message
                 },
                 { status: 500 }
             );
