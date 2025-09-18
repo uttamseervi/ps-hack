@@ -19,7 +19,6 @@ HealthBridge is an AI‑assisted healthcare access platform designed to support 
 - Tailwind CSS 4 + Radix UI + ShadCN‑style components
 - Google Gemini (`@google/generative-ai`) for AI triage
 - Google Maps (`@react-google-maps/api`) for maps and routing
-- Supabase (`@supabase/supabase-js`) client (data layer placeholder)
 - TypeScript, Zod, React Hook Form, Recharts, Framer Motion
 
 ## Directory Overview
@@ -38,7 +37,7 @@ components/
   MapView.tsx                   # Google Maps view + directions
   ui/*                          # Radix/ShadCN UI primitives
 lib/
-  db.ts                         # Supabase client init
+  db.ts                        
 ```
 
 ## Getting Started
@@ -80,20 +79,17 @@ Create a `.env.local` at the project root with the following variables:
 
 ```bash
 # Google Gemini (used by /api/chatbot/analyze)
-GOOGLE_API_KEY=your_gemini_api_key
+#
 
 # Google Maps JavaScript API (client‑side)
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_js_api_key
 
 # Supabase (server‑side key used here for prototyping only)
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
 ```
 
 Notes:
-- The AI chatbot endpoint requires `GOOGLE_API_KEY`.
 - The map pages require `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`.
-- `lib/db.ts` currently initializes Supabase using the service role key for convenience during prototyping. Do not use service role keys in client‑accessible code in production; switch to an anon/public key and move privileged operations to server routes.
 
 ## Key Routes
 
@@ -166,3 +162,4 @@ Response shape (example):
 ## License
 
 No license specified. All rights reserved by the authors. If you plan to use this project, add an appropriate license file.
+
