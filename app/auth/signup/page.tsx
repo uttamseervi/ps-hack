@@ -4,10 +4,11 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Heart, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -19,7 +20,7 @@ export default function SignupPage() {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "",
+    role: "refugee",
     organization: "",
     languages: "",
     location: "",
@@ -37,6 +38,18 @@ export default function SignupPage() {
   }, [searchParams])
 
   const handleInputChange = (field: string, value: string) => {
+    // If role is changing, clear role-specific fields
+    if (field === 'role') {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value,
+        organization: '',
+        specialization: '',
+        languages: '',
+        location: ''
+      }));
+      return;
+    }
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -44,16 +57,59 @@ export default function SignupPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulate signup process
-    setTimeout(() => {
-      // Mock registration - redirect based on role
+    // Basic validation
+    if (formData.password !== formData.confirmPassword) {
+      alert("Passwords do not match")
+      setIsLoading(false)
+      return
+    }
+
+    try {
       if (formData.role === "refugee") {
-        router.push("/dashboard/refugee")
+        // Prepare refugee registration data
+        const registrationData = {
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.name.split(' ')[0],
+          lastName: formData.name.split(' ').slice(1).join(' ') || ' ',
+          phone: '', // Add phone field to your form if needed
+          dateOfBirth: '', // Add date of birth field if needed
+          gender: 'prefer_not_to_say', // Add gender field if needed
+          countryOfOrigin: formData.location,
+          currentLocation: formData.location,
+          languages: formData.languages.split(',').map(lang => lang.trim()).filter(lang => lang.length > 0),
+          skills: [], // Add skills field if needed
+          bio: '' // Add bio field if needed
+        }
+
+        // Call the refugee registration API
+        const response = await fetch('/api/refugee-registration', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(registrationData),
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Registration failed')
+        }
+
+        // Redirect to login with success message
+        router.push('/auth/login?registered=true')
       } else if (formData.role === "ngo") {
+        // Handle NGO registration here if needed
+        // const response = await fetch('/api/ngo-registration', {...})
         router.push("/dashboard/ngo")
       }
+    } catch (error) {
+      console.error('Registration error:', error)
+      alert(error instanceof Error ? error.message : 'Registration failed. Please try again.')
+    } finally {
       setIsLoading(false)
-    }, 2000)
+    }
   }
 
   return (
@@ -76,7 +132,18 @@ export default function SignupPage() {
             <CardDescription>Create your account to access healthcare services</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSignup} className="space-y-4">
+            <Tabs 
+              value={formData.role} 
+              onValueChange={(value) => handleInputChange("role", value)}
+              className="w-full"
+            >
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="refugee">Refugee</TabsTrigger>
+                <TabsTrigger value="ngo">Healthcare/NGO</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value={formData.role}>
+                <form onSubmit={handleSignup} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
                 <Input
@@ -120,18 +187,31 @@ export default function SignupPage() {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="role">I am a</Label>
-                <Select value={formData.role} onValueChange={(value) => handleInputChange("role", value)} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="refugee">Refugee seeking healthcare</SelectItem>
-                    <SelectItem value="ngo">Healthcare provider / NGO</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+
+              {formData.role === "refugee" && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="languages">Languages Spoken</Label>
+                    <Input
+                      id="languages"
+                      placeholder="e.g., Arabic, English, French"
+                      value={formData.languages}
+                      onChange={(e) => handleInputChange("languages", e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Current Location</Label>
+                    <Input
+                      id="location"
+                      placeholder="City, Country"
+                      value={formData.location}
+                      onChange={(e) => handleInputChange("location", e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+              )}
 
               {formData.role === "ngo" && (
                 <>
@@ -166,29 +246,13 @@ export default function SignupPage() {
                 </>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="languages">Languages Spoken</Label>
-                <Input
-                  id="languages"
-                  placeholder="e.g., Arabic, English, French"
-                  value={formData.languages}
-                  onChange={(e) => handleInputChange("languages", e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="location">Current Location</Label>
-                <Input
-                  id="location"
-                  placeholder="City, Country"
-                  value={formData.location}
-                  onChange={(e) => handleInputChange("location", e.target.value)}
-                />
-              </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating Account..." : "Create Account"}
-              </Button>
-            </form>
+                  <Button type="submit" className="w-full mt-6" disabled={isLoading}>
+                    {isLoading ? "Creating Account..." : `Sign up as ${formData.role === 'refugee' ? 'Refugee' : 'Healthcare Provider'}`}
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
                 Already have an account?{" "}
