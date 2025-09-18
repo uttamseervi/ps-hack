@@ -1,0 +1,124 @@
+{
+  "refugeeRequests": [
+    {
+      "id": "req-001",
+      "name": "Ahmad Hassan",
+      "age": 34,
+      "symptoms": ["fever", "cough", "fatigue"],
+      "severity": "moderate",
+      "location": { "lat": 33.8938, "lng": 35.5018, "address": "Beirut, Lebanon" },
+      "timestamp": "2024-01-15T10:30:00Z",
+      "status": "pending",
+      "language": "Arabic"
+    },
+    {
+      "id": "req-002",
+      "name": "Fatima Al-Rashid",
+      "age": 28,
+      "symptoms": ["severe headache", "nausea", "dizziness"],
+      "severity": "severe",
+      "location": { "lat": 33.8869, "lng": 35.5131, "address": "Hamra, Beirut" },
+      "timestamp": "2024-01-15T11:45:00Z",
+      "status": "urgent",
+      "language": "Arabic"
+    },
+    {
+      "id": "req-003",
+      "name": "Marie Dubois",
+      "age": 45,
+      "symptoms": ["back pain", "muscle stiffness"],
+      "severity": "mild",
+      "location": { "lat": 33.8704, "lng": 35.5037, "address": "Verdun, Beirut" },
+      "timestamp": "2024-01-15T09:15:00Z",
+      "status": "resolved",
+      "language": "French"
+    }
+  ],
+  "healthServices": [
+    {
+      "id": "service-001",
+      "name": "UNHCR Primary Health Clinic",
+      "type": "clinic",
+      "location": { "lat": 33.8886, "lng": 35.4955, "address": "Ras Beirut" },
+      "services": ["General Medicine", "Pediatrics", "Emergency Care"],
+      "hours": "8:00 AM - 6:00 PM",
+      "contact": "+961-1-123456",
+      "languages": ["Arabic", "English", "French"]
+    },
+    {
+      "id": "service-002",
+      "name": "Red Cross Pharmacy",
+      "type": "pharmacy",
+      "location": { "lat": 33.8792, "lng": 35.5089, "address": "Hamra Street" },
+      "services": ["Prescription Medications", "First Aid Supplies", "Health Consultations"],
+      "hours": "9:00 AM - 9:00 PM",
+      "contact": "+961-1-234567",
+      "languages": ["Arabic", "English"]
+    },
+    {
+      "id": "service-003",
+      "name": "MSF Mobile Clinic",
+      "type": "mobile",
+      "location": { "lat": 33.865, "lng": 35.485, "address": "Shatila Camp" },
+      "services": ["Emergency Medicine", "Maternal Health", "Mental Health"],
+      "hours": "10:00 AM - 4:00 PM",
+      "contact": "+961-1-345678",
+      "languages": ["Arabic", "French", "English"]
+    }
+  ],
+  "chatbotResponses": {
+    "en": {
+      "greeting": "Hello! I'm your AI health assistant. How can I help you today?",
+      "fever_cough": "Based on your symptoms of fever and cough, you may have a mild respiratory infection. Please rest, drink plenty of fluids, and monitor your temperature. If symptoms worsen or persist for more than 3 days, please seek medical attention.",
+      "emergency": "This sounds like it could be serious. Please seek immediate medical attention or call emergency services at 112. Would you like me to help you find the nearest hospital?"
+    },
+    "ar": {
+      "greeting": "مرحباً! أنا مساعدك الصحي الذكي. كيف يمكنني مساعدتك اليوم؟",
+      "fever_cough": "بناءً على أعراض الحمى والسعال، قد تكون لديك عدوى تنفسية خفيفة. يرجى الراحة وشرب الكثير من السوائل ومراقبة درجة حرارتك. إذا ساءت الأعراض أو استمرت لأكثر من 3 أيام، يرجى طلب العناية الطبية.",
+      "emergency": "يبدو أن هذا قد يكون خطيراً. يرجى طلب العناية الطبية الفورية أو الاتصال بخدمات الطوارئ على الرقم 112. هل تريد مني مساعدتك في العثور على أقرب مستشفى؟"
+    },
+    "fr": {
+      "greeting": "Bonjour! Je suis votre assistant santé IA. Comment puis-je vous aider aujourd'hui?",
+      "fever_cough": "D'après vos symptômes de fièvre et de toux, vous pourriez avoir une infection respiratoire légère. Veuillez vous reposer, boire beaucoup de liquides et surveiller votre température. Si les symptômes s'aggravent ou persistent plus de 3 jours, consultez un médecin.",
+      "emergency": "Cela semble potentiellement grave. Veuillez consulter immédiatement un médecin ou appeler les services d'urgence au 112. Voulez-vous que je vous aide à trouver l'hôpital le plus proche?"
+    }
+  },
+  "healthEducation": [
+    {
+      "id": "edu-001",
+      "title": "Preventing Cholera: Essential Guidelines",
+      "category": "Prevention",
+      "languages": ["en", "ar", "fr"],
+      "content": {
+        "en": "Cholera is a waterborne disease that can be prevented by following proper hygiene practices...",
+        "ar": "الكوليرا مرض ينتقل عن طريق المياه ويمكن الوقاية منه باتباع ممارسات النظافة المناسبة...",
+        "fr": "Le choléra est une maladie d'origine hydrique qui peut être prévenue en suivant des pratiques d'hygiène appropriées..."
+      },
+      "image": "/placeholder.svg?height=200&width=300"
+    },
+    {
+      "id": "edu-002",
+      "title": "First Aid Basics for Families",
+      "category": "Emergency Care",
+      "languages": ["en", "ar", "fr"],
+      "content": {
+        "en": "Learn essential first aid techniques that every family should know...",
+        "ar": "تعلم تقنيات الإسعافات الأولية الأساسية التي يجب أن تعرفها كل عائلة...",
+        "fr": "Apprenez les techniques de premiers secours essentielles que chaque famille devrait connaître..."
+      },
+      "image": "/placeholder.svg?height=200&width=300"
+    },
+    {
+      "id": "edu-003",
+      "title": "Nutrition Tips for Refugee Families",
+      "category": "Nutrition",
+      "languages": ["en", "ar", "fr"],
+      "content": {
+        "en": "Maintaining proper nutrition in challenging circumstances...",
+        "ar": "الحفاظ على التغذية السليمة في الظروف الصعبة...",
+        "fr": "Maintenir une nutrition adéquate dans des circonstances difficiles..."
+      },
+      "image": "/placeholder.svg?height=200&width=300"
+    }
+  ]
+}
