@@ -147,6 +147,48 @@ export default function ChatbotPage(): JSX.Element {
     })
   }
 
+  // Format the API response for display
+  const formatMedicalResponse = (response: any): string => {
+    if (!response || typeof response === 'string') {
+      return response || "I've analyzed your message and images. Please consult with a healthcare professional for proper diagnosis."
+    }
+
+    if (response.raw) {
+      return response.raw
+    }
+
+    // Format the structured medical response
+    let formatted = ""
+    
+    if (response.classification) {
+      formatted += `**Classification: ${response.classification}**\n\n`
+    }
+    
+    if (response.summary) {
+      formatted += `**Summary:** ${response.summary}\n\n`
+    }
+    
+    if (response.reasoning) {
+      formatted += `**Analysis:** ${response.reasoning}\n\n`
+    }
+    
+    if (response.recommended_care && Array.isArray(response.recommended_care)) {
+      formatted += `**Recommended Care:**\n`
+      response.recommended_care.forEach((care: string, index: number) => {
+        formatted += `${index + 1}. ${care}\n`
+      })
+      formatted += `\n`
+    }
+    
+    if (response.next_steps) {
+      formatted += `**Next Steps:** ${response.next_steps}\n\n`
+    }
+    
+    formatted += `\n⚠️ **Important:** This is AI-generated guidance. Please consult a healthcare professional for proper medical diagnosis and treatment.`
+    
+    return formatted
+  }
+
   // Handle message submission with API call
   const handleSubmit = async (): Promise<void> => {
     if (!inputMessage.trim() && uploadedImages.length === 0) return
@@ -192,10 +234,10 @@ export default function ChatbotPage(): JSX.Element {
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: "bot",
-        content: data.response || "I've analyzed your message and images. Based on what I can see, please consult with a healthcare professional for proper diagnosis.",
+        content: formatMedicalResponse(data.response),
         timestamp: new Date(),
         language: selectedLanguage,
-        isEmergency: data.isEmergency || false,
+        isEmergency: data.response?.classification === 'CRITICAL' || data.isEmergency || false,
       }
 
       setMessages((prev) => [...prev, botMessage])
@@ -418,7 +460,7 @@ export default function ChatbotPage(): JSX.Element {
 
             {/* Messages */}
             <CardContent className="flex-1 p-0">
-              <ScrollArea className="h-full p-4">
+              <ScrollArea className="h-96 overflow-y-scroll p-4">
                 <div className="space-y-4">
                   <AnimatePresence>
                     {messages.map((message) => (
@@ -473,7 +515,37 @@ export default function ChatbotPage(): JSX.Element {
                             </div>
                           )}
                           
-                          <p className="text-sm leading-relaxed">{message.content}</p>
+                          {/* Updated message content display */}
+                          <div className="text-sm leading-relaxed">
+                            {message.content.split('\n').map((line, index) => {
+                              if (line.startsWith('**') && line.endsWith('**')) {
+                                // Bold headings
+                                return (
+                                  <div key={index} className="font-semibold text-foreground mb-2">
+                                    {line.slice(2, -2)}
+                                  </div>
+                                )
+                              } else if (line.startsWith('⚠️')) {
+                                // Warning message
+                                return (
+                                  <div key={index} className="bg-yellow-50 border border-yellow-200 rounded p-2 mt-3 text-yellow-800 text-xs">
+                                    {line}
+                                  </div>
+                                )
+                              } else if (line.trim() === '') {
+                                // Empty line
+                                return <br key={index} />
+                              } else {
+                                // Regular text
+                                return (
+                                  <div key={index} className="mb-1">
+                                    {line}
+                                  </div>
+                                )
+                              }
+                            })}
+                          </div>
+                          
                           <div className="flex items-center justify-between mt-2">
                             <span className="text-xs opacity-70">
                               {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
