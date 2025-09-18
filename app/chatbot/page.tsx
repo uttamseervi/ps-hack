@@ -460,7 +460,7 @@ export default function ChatbotPage(): JSX.Element {
 
             {/* Messages */}
             <CardContent className="flex-1 p-0">
-              <ScrollArea className="h-96 overflow-y-scroll p-4">
+              <ScrollArea className="h-96 overflow-y-scrollme p-4">
                 <div className="space-y-4">
                   <AnimatePresence>
                     {messages.map((message) => (
