@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-
+import React from "react"
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,12 +21,24 @@ import {
   AlertTriangle,
   Heart,
   ArrowLeft,
+  Paperclip,
+  Image as ImageIcon,
+  X,
+  Loader2,
 } from "lucide-react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
+import Image from "next/image"
 
 // Import dummy data
 import dummyData from "@/lib/dummy-data.json"
+
+interface UploadedImage {
+  id: string
+  file: File
+  url: string
+  name: string
+}
 
 interface Message {
   id: string
@@ -36,16 +47,22 @@ interface Message {
   timestamp: Date
   language: string
   isEmergency?: boolean
+  images?: UploadedImage[]
 }
 
-export default function ChatbotPage() {
+export default function ChatbotPage(): JSX.Element {
   const [messages, setMessages] = useState<Message[]>([])
   const [inputMessage, setInputMessage] = useState("")
   const [selectedLanguage, setSelectedLanguage] = useState("en")
   const [isListening, setIsListening] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
+  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
+  const [isUploading, setIsUploading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const languages = [
     { code: "en", name: "English", flag: "🇺🇸" },
@@ -53,7 +70,7 @@ export default function ChatbotPage() {
     { code: "fr", name: "Français", flag: "🇫🇷" },
   ]
 
-  const scrollToBottom = () => {
+  const scrollToBottom = (): void => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
@@ -68,12 +85,147 @@ export default function ChatbotPage() {
       type: "bot",
       content:
         dummyData.chatbotResponses[selectedLanguage as keyof typeof dummyData.chatbotResponses]?.greeting ||
-        "Hello! I'm your AI health assistant. How can I help you today?",
+        "Hello! I'm your AI health assistant. How can I help you today? You can also upload images of symptoms or medical documents.",
       timestamp: new Date(),
       language: selectedLanguage,
     }
     setMessages([welcomeMessage])
   }, [selectedLanguage])
+
+  // Handle file upload
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const files = event.target.files
+    if (!files) return
+
+    setIsUploading(true)
+
+    const newImages: UploadedImage[] = []
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      
+      // Validate file type (only images)
+      if (!file.type.startsWith('image/')) {
+        alert(`${file.name} is not an image file. Please upload only images.`)
+        continue
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert(`${file.name} is too large. Please upload images smaller than 5MB.`)
+        continue
+      }
+
+      const imageUrl = URL.createObjectURL(file)
+      const uploadedImage: UploadedImage = {
+        id: `img_${Date.now()}_${i}`,
+        file,
+        url: imageUrl,
+        name: file.name
+      }
+      
+      newImages.push(uploadedImage)
+    }
+
+    setUploadedImages(prev => [...prev, ...newImages])
+    setIsUploading(false)
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  // Remove uploaded image
+  const removeImage = (imageId: string): void => {
+    setUploadedImages(prev => {
+      const imageToRemove = prev.find(img => img.id === imageId)
+      if (imageToRemove) {
+        URL.revokeObjectURL(imageToRemove.url)
+      }
+      return prev.filter(img => img.id !== imageId)
+    })
+  }
+
+  // Handle message submission with API call
+  const handleSubmit = async (): Promise<void> => {
+    if (!inputMessage.trim() && uploadedImages.length === 0) return
+
+    setIsSubmitting(true)
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      type: "user",
+      content: inputMessage || "Uploaded images",
+      timestamp: new Date(),
+      language: selectedLanguage,
+      images: uploadedImages.length > 0 ? [...uploadedImages] : undefined,
+    }
+
+    setMessages((prev) => [...prev, userMessage])
+    setInputMessage("")
+    setIsTyping(true)
+
+    try {
+      // Prepare form data for API call
+      const formData = new FormData()
+      formData.append('message', inputMessage)
+      formData.append('language', selectedLanguage)
+      
+      // Add images to form data
+      uploadedImages.forEach((image, index) => {
+        formData.append(`images`, image.file)
+      })
+
+      // Call Next.js API route
+      const response = await fetch('/api/chatbot/analyze', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to get response from AI assistant')
+      }
+
+      const data = await response.json()
+      
+      const botMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: "bot",
+        content: data.response || "I've analyzed your message and images. Based on what I can see, please consult with a healthcare professional for proper diagnosis.",
+        timestamp: new Date(),
+        language: selectedLanguage,
+        isEmergency: data.isEmergency || false,
+      }
+
+      setMessages((prev) => [...prev, botMessage])
+      
+    } catch (error) {
+      console.error('Error calling chatbot API:', error)
+      
+      // Fallback to local AI response
+      const aiResponse = getAIResponse(inputMessage, selectedLanguage)
+      const botMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: "bot",
+        content: aiResponse.content + (uploadedImages.length > 0 ? " I can see you've uploaded images, but I'm having trouble analyzing them right now. Please try again later or consult a healthcare professional." : ""),
+        timestamp: new Date(),
+        language: selectedLanguage,
+        isEmergency: aiResponse.isEmergency,
+      }
+
+      setMessages((prev) => [...prev, botMessage])
+    } finally {
+      setIsTyping(false)
+      setIsSubmitting(false)
+      
+      // Clear uploaded images after submission
+      uploadedImages.forEach(image => {
+        URL.revokeObjectURL(image.url)
+      })
+      setUploadedImages([])
+    }
+  }
 
   const getAIResponse = (userMessage: string, language: string): { content: string; isEmergency: boolean } => {
     const lowerMessage = userMessage.toLowerCase()
@@ -160,39 +312,11 @@ export default function ChatbotPage() {
     }
   }
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim()) return
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      type: "user",
-      content: inputMessage,
-      timestamp: new Date(),
-      language: selectedLanguage,
-    }
-
-    setMessages((prev) => [...prev, userMessage])
-    setInputMessage("")
-    setIsTyping(true)
-
-    // Simulate AI thinking time
-    setTimeout(() => {
-      const aiResponse = getAIResponse(inputMessage, selectedLanguage)
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: "bot",
-        content: aiResponse.content,
-        timestamp: new Date(),
-        language: selectedLanguage,
-        isEmergency: aiResponse.isEmergency,
-      }
-
-      setMessages((prev) => [...prev, botMessage])
-      setIsTyping(false)
-    }, 1500)
+  const handleSendMessage = async (): Promise<void> => {
+    await handleSubmit()
   }
 
-  const handleVoiceInput = () => {
+  const handleVoiceInput = (): void => {
     if (!isListening) {
       setIsListening(true)
       // Simulate voice recognition
@@ -205,14 +329,14 @@ export default function ChatbotPage() {
     }
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       handleSendMessage()
     }
   }
 
-  const speakMessage = (text: string) => {
+  const speakMessage = (text: string): void => {
     if ("speechSynthesis" in window) {
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.lang = selectedLanguage === "ar" ? "ar-SA" : selectedLanguage === "fr" ? "fr-FR" : "en-US"
@@ -227,12 +351,12 @@ export default function ChatbotPage() {
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-4 mb-4">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/dashboard/refugee">
+            <Link href="/dashboard/refugee" passHref>
+              <Button variant="ghost" size="sm">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Dashboard
-              </Link>
-            </Button>
+              </Button>
+            </Link>
           </div>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-3">
@@ -326,6 +450,29 @@ export default function ChatbotPage() {
                               <span className="text-xs font-medium">EMERGENCY ALERT</span>
                             </div>
                           )}
+                          
+                          {/* Display uploaded images */}
+                          {message.images && message.images.length > 0 && (
+                            <div className="mb-3">
+                              <div className="grid grid-cols-2 gap-2 mb-2">
+                                {message.images.map((image) => (
+                                  <div key={image.id} className="relative">
+                                    <Image
+                                      src={image.url}
+                                      alt={image.name}
+                                      width={150}
+                                      height={150}
+                                      className="rounded-lg object-cover"
+                                    />
+                                    <div className="absolute bottom-1 left-1 right-1 bg-black/50 text-white text-xs p-1 rounded text-center truncate">
+                                      {image.name}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
                           <p className="text-sm leading-relaxed">{message.content}</p>
                           <div className="flex items-center justify-between mt-2">
                             <span className="text-xs opacity-70">
@@ -372,6 +519,37 @@ export default function ChatbotPage() {
               </ScrollArea>
             </CardContent>
 
+            {/* Image Preview Area */}
+            {uploadedImages.length > 0 && (
+              <div className="border-t p-4 bg-muted/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Attached Images ({uploadedImages.length})</span>
+                </div>
+                <div className="flex gap-2 overflow-x-auto">
+                  {uploadedImages.map((image) => (
+                    <div key={image.id} className="relative flex-shrink-0">
+                      <Image
+                        src={image.url}
+                        alt={image.name}
+                        width={60}
+                        height={60}
+                        className="rounded-lg object-cover border"
+                      />
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="absolute -top-2 -right-2 h-5 w-5 p-0 rounded-full"
+                        onClick={() => removeImage(image.id)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Input Area */}
             <div className="border-t p-4">
               <div className="flex gap-2">
@@ -388,28 +566,70 @@ export default function ChatbotPage() {
                           ? "Tapez votre message ici..."
                           : "Type your message here..."
                     }
-                    className="pr-12"
+                    className="pr-20"
                     dir={selectedLanguage === "ar" ? "rtl" : "ltr"}
+                    disabled={isSubmitting}
                   />
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className={`absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 ${
-                      isListening ? "text-red-500" : "text-muted-foreground"
-                    }`}
-                    onClick={handleVoiceInput}
-                  >
-                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                  </Button>
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 text-muted-foreground"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading || isSubmitting}
+                    >
+                      {isUploading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Paperclip className="w-4 h-4" />
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className={`h-8 w-8 p-0 ${
+                        isListening ? "text-red-500" : "text-muted-foreground"
+                      }`}
+                      onClick={handleVoiceInput}
+                      disabled={isSubmitting}
+                    >
+                      {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                    </Button>
+                  </div>
                 </div>
-                <Button onClick={handleSendMessage} disabled={!inputMessage.trim() || isTyping}>
-                  <Send className="w-4 h-4" />
+                <Button 
+                  onClick={handleSendMessage} 
+                  disabled={(!inputMessage.trim() && uploadedImages.length === 0) || isTyping || isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
                 </Button>
               </div>
+              
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+              
               {isListening && (
                 <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
                   <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
                   Listening... Speak now
+                </p>
+              )}
+              
+              {isUploading && (
+                <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Uploading images...
                 </p>
               )}
             </div>
@@ -429,24 +649,24 @@ export default function ChatbotPage() {
             </CardHeader>
             <CardContent>
               <div className="grid md:grid-cols-3 gap-4">
-                <Button variant="outline" className="justify-start bg-transparent" asChild>
-                  <Link href="/symptom-checker">
+                <Link href="/symptom-checker" passHref>
+                  <Button variant="outline" className="justify-start bg-transparent w-full">
                     <Heart className="w-4 h-4 mr-2" />
                     Symptom Checker
-                  </Link>
-                </Button>
-                <Button variant="outline" className="justify-start bg-transparent" asChild>
-                  <Link href="/map">
+                  </Button>
+                </Link>
+                <Link href="/map" passHref>
+                  <Button variant="outline" className="justify-start bg-transparent w-full">
                     <MessageCircle className="w-4 h-4 mr-2" />
                     Find Services
-                  </Link>
-                </Button>
-                <Button variant="outline" className="justify-start bg-transparent" asChild>
-                  <Link href="/health-hub">
+                  </Button>
+                </Link>
+                <Link href="/health-hub" passHref>
+                  <Button variant="outline" className="justify-start bg-transparent w-full">
                     <Bot className="w-4 h-4 mr-2" />
                     Health Education
-                  </Link>
-                </Button>
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
