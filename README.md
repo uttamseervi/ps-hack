@@ -6,7 +6,7 @@ HealthBridge is an AI‑assisted healthcare access platform designed to support 
 
 ## Features
 
-- Multilingual AI Chatbot: Text + image triage using Google Gemini (Vision).
+- Multilingual AI Chatbot: Text + image triage
 - Symptom Checker: Risk assessment and care guidance (UI scaffolded).
 - Healthcare Locator Map: Nearby NGOs/clinics with directions using Google Maps.
 - Role‑based Onboarding: Separate flows for Refugees and NGOs/Providers.
@@ -17,7 +17,6 @@ HealthBridge is an AI‑assisted healthcare access platform designed to support 
 
 - Next.js 14 (App Router) + React 18
 - Tailwind CSS 4 + Radix UI + ShadCN‑style components
-- Google Gemini (`@google/generative-ai`) for AI triage
 - Google Maps (`@react-google-maps/api`) for maps and routing
 - TypeScript, Zod, React Hook Form, Recharts, Framer Motion
 
@@ -162,4 +161,5 @@ Response shape (example):
 ## License
 
 No license specified. All rights reserved by the authors. If you plan to use this project, add an appropriate license file.
+
 
