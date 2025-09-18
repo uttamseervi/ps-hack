@@ -182,10 +182,7 @@ export default function ChatbotPage(): JSX.Element {
     
     if (response.next_steps) {
       formatted += `**Next Steps:** ${response.next_steps}\n\n`
-    }
-    
-    formatted += `\n⚠️ **Important:** This is AI-generated guidance. Please consult a healthcare professional for proper medical diagnosis and treatment.`
-    
+    } 
     return formatted
   }
 
@@ -447,7 +444,7 @@ export default function ChatbotPage(): JSX.Element {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <Card className="h-[600px] flex flex-col">
+          <Card className="h-[900px] flex flex-col">
             <CardHeader className="border-b">
               <CardTitle className="flex items-center gap-2">
                 <Bot className="w-5 h-5 text-primary" />
@@ -460,7 +457,7 @@ export default function ChatbotPage(): JSX.Element {
 
             {/* Messages */}
             <CardContent className="flex-1 p-0">
-              <ScrollArea className="h-full p-4">
+              <ScrollArea className="h-96 overflow-y-scrollme p-4">
                 <div className="space-y-4">
                   <AnimatePresence>
                     {messages.map((message) => (
@@ -516,50 +513,90 @@ export default function ChatbotPage(): JSX.Element {
                           )}
                           
                           {/* Updated message content display */}
-                          <div className="text-sm leading-relaxed">
-                            {message.content.split('\n').map((line, index) => {
-                              if (line.startsWith('**') && line.endsWith('**')) {
-                                // Bold headings
-                                return (
-                                  <div key={index} className="font-semibold text-foreground mb-2">
-                                    {line.slice(2, -2)}
-                                  </div>
-                                )
-                              } else if (line.startsWith('⚠️')) {
-                                // Warning message
-                                return (
-                                  <div key={index} className="bg-yellow-50 border border-yellow-200 rounded p-2 mt-3 text-yellow-800 text-xs">
-                                    {line}
-                                  </div>
-                                )
-                              } else if (line.trim() === '') {
-                                // Empty line
-                                return <br key={index} />
-                              } else {
-                                // Regular text
-                                return (
-                                  <div key={index} className="mb-1">
-                                    {line}
-                                  </div>
-                                )
-                              }
-                            })}
-                          </div>
+                          
                           
                           <div className="flex items-center justify-between mt-2">
                             <span className="text-xs opacity-70">
                               {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                             </span>
-                            {message.type === "bot" && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 w-6 p-0 opacity-70 hover:opacity-100"
-                                onClick={() => speakMessage(message.content)}
-                              >
-                                <Volume2 className="w-3 h-3" />
-                              </Button>
-                            )}
+                            {/* Updated message content display */}
+{message.type === "bot" ? (
+  <div className="text-sm leading-relaxed space-y-4">
+    {/* Example parsing the response structure if formatted */}
+    {message.content.includes("**Classification:") && (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Classification */}
+        <div className="p-3 bg-primary/5 rounded-lg border">
+          <h4 className="font-semibold text-primary mb-1">Classification</h4>
+          <p className="text-foreground text-sm">
+            {message.content.match(/\*\*Classification: (.*?)\*\*/)?.[1] || "N/A"}
+          </p>
+        </div>
+
+        {/* Summary */}
+        <div className="p-3 bg-accent/5 rounded-lg border">
+          <h4 className="font-semibold text-accent mb-1">Summary</h4>
+          <p className="text-foreground text-sm">
+            {message.content.match(/\*\*Summary:\*\*([\s\S]*?)(\*\*|$)/)?.[1]?.trim() || "N/A"}
+          </p>
+        </div>
+
+        {/* Analysis */}
+        <div className="p-3 bg-muted/50 rounded-lg border col-span-1 md:col-span-2">
+          <h4 className="font-semibold text-foreground mb-1">Analysis</h4>
+          <p className="text-foreground text-sm whitespace-pre-line">
+            {message.content.match(/\*\*Analysis:\*\*([\s\S]*?)(\*\*|$)/)?.[1]?.trim() || "N/A"}
+          </p>
+        </div>
+
+        {/* Recommended Care */}
+        <div className="p-3 bg-green-50 rounded-lg border col-span-1 md:col-span-2">
+          <h4 className="font-semibold text-green-700 mb-2">Recommended Care</h4>
+          <ul className="list-disc list-inside text-sm text-foreground space-y-1">
+            {message.content
+              .split("\n")
+              .filter((line) => /^\d+\./.test(line))
+              .map((care, idx) => (
+                <li key={idx}>{care.replace(/^\d+\.\s*/, "")}</li>
+              ))}
+          </ul>
+        </div>
+
+        {/* Next Steps */}
+        <div className="p-3 bg-blue-50 rounded-lg border col-span-1 md:col-span-2">
+          <h4 className="font-semibold text-blue-700 mb-1">Next Steps</h4>
+          <p className="text-foreground text-sm">
+            {message.content.match(/\*\*Next Steps:\*\*([\s\S]*?)(\*\*|$)/)?.[1]?.trim() || "N/A"}
+          </p>
+        </div>
+      </div>
+    )}
+
+    Action Buttons
+    <div className="flex gap-3 mt-4">
+      <Button size="sm" variant="default">
+        🚑 Ping Doctor
+      </Button>
+      <Button size="sm" variant="outline"
+      onClick={()=>
+        window.location.href = "/map"
+      }
+      >
+        🏥 Nearby Medical Stores
+      </Button>
+    </div>
+
+    {/* Fallback warning or plain text */}
+    {message.content.includes("⚠️") && (
+      <div className="bg-yellow-50 border border-yellow-200 rounded p-2 mt-3 text-yellow-800 text-xs">
+        {message.content.split("\n").find((line) => line.startsWith("⚠️"))}
+      </div>
+    )}
+  </div>
+) : (
+  <div className="text-sm leading-relaxed">{message.content}</div>
+)}
+
                           </div>
                         </div>
                         {message.type === "user" && (
@@ -709,7 +746,7 @@ export default function ChatbotPage(): JSX.Element {
         </motion.div>
 
         {/* Quick Actions */}
-        {/* <motion.div
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
@@ -742,7 +779,7 @@ export default function ChatbotPage(): JSX.Element {
               </div>
             </CardContent>
           </Card>
-        </motion.div> */}
+        </motion.div>
       </div>
     </div>
   )
