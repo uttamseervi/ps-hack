@@ -59,6 +59,8 @@ export default function ChatbotPage(): JSX.Element {
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [pingingDoctor, setPingingDoctor] = useState(false)
+  const [pingStatus, setPingStatus] = useState<'idle' | 'success' | 'error'>('idle')
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -383,6 +385,61 @@ export default function ChatbotPage(): JSX.Element {
     }
   }
 
+  const handlePingDoctor = async () => {
+    setPingingDoctor(true);
+    setPingStatus('idle');
+
+    try {
+      // Get the latest bot message with medical analysis
+      const latestBotMessage = messages.filter(m => m.type === 'bot').pop();
+      const reportUrl = `${window.location.origin}/report/20`; // You can make this dynamic
+      
+      const response = await fetch('/api/twilio/send-sms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phoneNumber: '+919353926018', // This will be overridden by the API
+          reportId: 'CHATBOT_' + Date.now(),
+          patientName: 'Chatbot User',
+          reportUrl: reportUrl,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setPingStatus('success');
+        // Add a success message to the chat
+        const successMessage: Message = {
+          id: Date.now().toString(),
+          type: "bot",
+          content: "✅ Doctor has been notified! SMS sent to medical team with your case details.",
+          timestamp: new Date(),
+          language: selectedLanguage,
+        };
+        setMessages(prev => [...prev, successMessage]);
+      } else {
+        throw new Error(result.error || 'Failed to send SMS');
+      }
+    } catch (error) {
+      console.error('Error pinging doctor:', error);
+      setPingStatus('error');
+      // Add an error message to the chat
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        type: "bot",
+        content: "❌ Failed to notify doctor. Please try again or contact emergency services directly.",
+        timestamp: new Date(),
+        language: selectedLanguage,
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setPingingDoctor(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-accent/10">
       <Navigation userRole="refugee" />
@@ -457,7 +514,7 @@ export default function ChatbotPage(): JSX.Element {
 
             {/* Messages */}
             <CardContent className="flex-1 p-0">
-              <ScrollArea className="h-96 overflow-y-scrollme p-4">
+              <ScrollArea className="h-[700px] overflow-y-scrollme p-4">
                 <div className="space-y-4">
                   <AnimatePresence>
                     {messages.map((message) => (
@@ -572,19 +629,37 @@ export default function ChatbotPage(): JSX.Element {
       </div>
     )}
 
-    Action Buttons
-    <div className="flex gap-3 mt-4">
-      <Button size="sm" variant="default">
-        🚑 Ping Doctor
-      </Button>
-      <Button size="sm" variant="outline"
-      onClick={()=>
-        window.location.href = "/map"
-      }
-      >
-        🏥 Nearby Medical Stores
-      </Button>
-    </div>
+    {/* Action Buttons - Only show for medical analysis results */}
+    {(message.content.includes("**Classification:") || message.content.includes("**Summary:") || message.isEmergency) && (
+      <>
+        <div className="text-sm font-medium text-gray-700 mb-3">Action Buttons</div>
+        <div className="flex gap-3 mt-4">
+          <Button 
+            size="sm" 
+            variant="default"
+            onClick={handlePingDoctor}
+            disabled={pingingDoctor}
+            className={pingingDoctor ? "opacity-50" : ""}
+          >
+            {pingingDoctor ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              "🚑 Ping Doctor"
+            )}
+          </Button>
+          <Button size="sm" variant="outline"
+          onClick={()=>
+            window.location.href = "/map"
+          }
+          >
+            🏥 Nearby Medical Stores
+          </Button>
+        </div>
+      </>
+    )}
 
     {/* Fallback warning or plain text */}
     {message.content.includes("⚠️") && (
@@ -743,43 +818,7 @@ export default function ChatbotPage(): JSX.Element {
               )}
             </div>
           </Card>
-        </motion.div>
-
-        {/* Quick Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="mt-6"
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-3 gap-4">
-                <Link href="/symptom-checker" passHref>
-                  <Button variant="outline" className="justify-start bg-transparent w-full">
-                    <Heart className="w-4 h-4 mr-2" />
-                    Symptom Checker
-                  </Button>
-                </Link>
-                <Link href="/map" passHref>
-                  <Button variant="outline" className="justify-start bg-transparent w-full">
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    Find Services
-                  </Button>
-                </Link>
-                <Link href="/health-hub" passHref>
-                  <Button variant="outline" className="justify-start bg-transparent w-full">
-                    <Bot className="w-4 h-4 mr-2" />
-                    Health Education
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        </motion.div> 
       </div>
     </div>
   )

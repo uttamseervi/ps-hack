@@ -240,6 +240,19 @@ export default function LandingPage() {
                 <Link href="#about">Learn More</Link>
               </Button>
             </div>
+            
+            {/* Test Report Links */}
+            <div className="mt-8 p-4 bg-muted/50 rounded-lg">
+              <h3 className="text-lg font-semibold mb-4">Test Report Pages</h3>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button asChild variant="secondary" size="sm">
+                  <Link href="/report/20">View Report #20</Link>
+                </Button>
+                <Button asChild variant="secondary" size="sm">
+                  <Link href="/report/90">View Report #90</Link>
+                </Button>
+              </div>
+            </div>
           </motion.div>
         </div>
       </section>

@@ -18,38 +18,32 @@ import { motion } from "framer-motion"
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
     confirmPassword: "",
     role: "refugee",
+    country: "",
+    governmentId: "",
     
     // Refugee specific fields
-    dateOfBirth: "",
-    gender: "",
-    phoneNumber: "",
-    currentAddress: "",
-    identificationNumber: "",
+    phone: "",
+    address: "",
     languages: "",
-    location: "",
-    emergencyContactName: "",
-    emergencyContactPhone: "",
-    medicalConditions: "",
-    bloodType: "",
-    allergies: "",
-    disabilities: "",
     
     // NGO specific fields
-    organization: "",
-    specialization: "",
-    registrationNumber: "",
-    website: "",
-    description: "",
-    contactPersonName: "",
-    contactPersonPhone: "",
-    servicesOffered: "",
-    yearsOfOperation: "",
+    organizationName: "",
+    ngoType: "",
+    services: "",
+    contact: "",
+    availability: "",
   })
+  
+  const [countries, setCountries] = useState<any[]>([])
+  const [selectedCountry, setSelectedCountry] = useState<any>(null)
+  const [showUniqueId, setShowUniqueId] = useState(false)
+  const [generatedUniqueId, setGeneratedUniqueId] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -59,7 +53,22 @@ export default function SignupPage() {
     if (roleParam) {
       setFormData((prev) => ({ ...prev, role: roleParam }))
     }
+    
+    // Fetch countries list
+    fetchCountries()
   }, [searchParams])
+  
+  const fetchCountries = async () => {
+    try {
+      const response = await fetch('/api/countries')
+      const data = await response.json()
+      if (data.success) {
+        setCountries(data.countries)
+      }
+    } catch (error) {
+      console.error('Error fetching countries:', error)
+    }
+  }
 
   const handleInputChange = (field: string, value: string) => {
     // If role is changing, clear role-specific fields
@@ -68,31 +77,28 @@ export default function SignupPage() {
         ...prev,
         [field]: value,
         // Reset all role-specific fields
-        organization: '',
-        specialization: '',
-        registrationNumber: '',
-        website: '',
-        description: '',
-        contactPersonName: '',
-        contactPersonPhone: '',
-        servicesOffered: '',
-        yearsOfOperation: '',
-        dateOfBirth: '',
-        gender: '',
-        phoneNumber: '',
-        currentAddress: '',
-        identificationNumber: '',
-        languages: '',
-        location: '',
-        emergencyContactName: '',
-        emergencyContactPhone: '',
-        medicalConditions: '',
-        bloodType: '',
-        allergies: '',
-        disabilities: ''
+        organizationName: '',
+        ngoType: '',
+        services: '',
+        contact: '',
+        availability: '',
+        phone: '',
+        address: '',
+        governmentId: '',
+        languages: ''
       }));
+      setSelectedCountry(null)
       return;
     }
+    
+    // Handle country selection
+    if (field === 'country') {
+      const country = countries.find(c => c.code === value)
+      setSelectedCountry(country)
+      setFormData(prev => ({ ...prev, [field]: value }))
+      return;
+    }
+    
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -107,83 +113,67 @@ export default function SignupPage() {
       return
     }
 
+    if (!formData.country) {
+      alert("Please select a country")
+      setIsLoading(false)
+      return
+    }
+
+    if (!formData.governmentId && formData.role === "refugee") {
+      alert("Please enter your government ID")
+      setIsLoading(false)
+      return
+    }
+
     try {
       if (formData.role === "refugee") {
         // Prepare refugee registration data
         const registrationData = {
           email: formData.email,
           password: formData.password,
-          name: formData.name,
-          languages: formData.languages.split(',').map(lang => lang.trim()).filter(lang => lang.length > 0),
-          location: {
-            address: formData.currentAddress,
-            city: formData.location
-          },
-          dateOfBirth: formData.dateOfBirth || null,
-          gender: formData.gender || null,
-          phoneNumber: formData.phoneNumber || null,
-          currentAddress: formData.currentAddress || null,
-          identificationNumber: formData.identificationNumber || null,
-          emergencyContact: {
-            name: formData.emergencyContactName || null,
-            phone: formData.emergencyContactPhone || null
-          },
-          medicalConditions: formData.medicalConditions.split(',').map(condition => condition.trim()).filter(condition => condition.length > 0),
-          bloodType: formData.bloodType || null,
-          allergies: formData.allergies.split(',').map(allergy => allergy.trim()).filter(allergy => allergy.length > 0),
-          disabilities: formData.disabilities.split(',').map(disability => disability.trim()).filter(disability => disability.length > 0),
-          familyMembers: [] // Can be extended later
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          country: formData.country,
+          governmentId: formData.governmentId,
+          phone: formData.phone || null,
+          address: formData.address || null,
+          languages: formData.languages ? formData.languages.split(',').map(lang => lang.trim()).filter(lang => lang.length > 0) : []
         }
 
-
-        // Call the refugee registration API using axios
-        const response = await axios.post('/api/register/refugee', registrationData)
+        // Call the refugee registration API
+        const response = await axios.post('/api/auth/register/refugee', registrationData)
 
         if (response.status !== 201 && response.status !== 200) {
           throw new Error(response.data.error || 'Registration failed')
         }
 
-        // Redirect to login with success message
-        router.push('/auth/login?registered=true&role=refugee')
+        // Show unique ID to user
+        setGeneratedUniqueId(response.data.uniqueId)
+        setShowUniqueId(true)
+
       } else if (formData.role === "ngo") {
         // Prepare NGO registration data
         const registrationData = {
           email: formData.email,
           password: formData.password,
-          name: formData.name,
-          languages: formData.languages.split(',').map(lang => lang.trim()).filter(lang => lang.length > 0),
-          location: {
-            address: formData.currentAddress,
-            city: formData.location
-          },
-          organizationName: formData.organization,
-          registrationNumber: formData.registrationNumber || null,
-          description: formData.description || null,
-          website: formData.website || null,
-          phoneNumber: formData.phoneNumber || null,
-          address: {
-            street: formData.currentAddress || '',
-            city: formData.location || ''
-          },
-          contactPerson: {
-            name: formData.contactPersonName || formData.name,
-            phone: formData.contactPersonPhone || formData.phoneNumber || ''
-          },
-          servicesOffered: formData.servicesOffered.split(',').map(service => service.trim()).filter(service => service.length > 0),
-          specializations: formData.specialization ? [formData.specialization] : [],
-          yearsOfOperation: formData.yearsOfOperation ? parseInt(formData.yearsOfOperation) : null
+          organizationName: formData.organizationName,
+          country: formData.country,
+          ngoType: formData.ngoType,
+          services: formData.services ? formData.services.split(',').map(service => service.trim()).filter(service => service.length > 0) : [],
+          contact: formData.contact || null,
+          availability: formData.availability || null
         }
 
-
-        // Call the NGO registration API using axios
+        // Call the NGO registration API
         const response = await axios.post('/api/auth/register/ngo', registrationData)
 
         if (response.status !== 201 && response.status !== 200) {
           throw new Error(response.data.error || 'Registration failed')
         }
 
-        // Redirect to login with success message
-        router.push('/auth/login?registered=true&role=ngo')
+        // Show unique ID to user
+        setGeneratedUniqueId(response.data.uniqueId)
+        setShowUniqueId(true)
       }
     } catch (error) {
       console.error('Registration error:', error)
@@ -228,15 +218,28 @@ export default function SignupPage() {
                   {/* Common Fields */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
+                      <Label htmlFor="firstName">First Name</Label>
                       <Input
-                        id="name"
-                        placeholder="Enter your full name"
-                        value={formData.name}
-                        onChange={(e) => handleInputChange("name", e.target.value)}
+                        id="firstName"
+                        placeholder="Enter your first name"
+                        value={formData.firstName}
+                        onChange={(e) => handleInputChange("firstName", e.target.value)}
                         required
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Last Name</Label>
+                      <Input
+                        id="lastName"
+                        placeholder="Enter your last name"
+                        value={formData.lastName}
+                        onChange={(e) => handleInputChange("lastName", e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
                       <Input
@@ -247,6 +250,21 @@ export default function SignupPage() {
                         onChange={(e) => handleInputChange("email", e.target.value)}
                         required
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="country">Country</Label>
+                      <Select value={formData.country} onValueChange={(value) => handleInputChange("country", value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your country" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {countries.map((country) => (
+                            <SelectItem key={country.code} value={country.code}>
+                              {country.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
@@ -275,38 +293,44 @@ export default function SignupPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="phoneNumber">Phone Number</Label>
-                      <Input
-                        id="phoneNumber"
-                        type="tel"
-                        placeholder="+1 (555) 123-4567"
-                        value={formData.phoneNumber}
-                        onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="location">Location (City)</Label>
-                      <Input
-                        id="location"
-                        placeholder="City, Country"
-                        value={formData.location}
-                        onChange={(e) => handleInputChange("location", e.target.value)}
-                        required
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="governmentId">
+                      {selectedCountry ? selectedCountry.idType : 'Government ID'}
+                    </Label>
+                    <Input
+                      id="governmentId"
+                      placeholder={selectedCountry ? selectedCountry.placeholder : 'Enter your government ID'}
+                      value={formData.governmentId}
+                      onChange={(e) => handleInputChange("governmentId", e.target.value)}
+                      required
+                    />
+                    {selectedCountry && (
+                      <p className="text-xs text-muted-foreground">
+                        Enter your {selectedCountry.idType} number
+                      </p>
+                    )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="currentAddress">Current Address</Label>
-                    <Textarea
-                      id="currentAddress"
-                      placeholder="Your current address"
-                      value={formData.currentAddress}
-                      onChange={(e) => handleInputChange("currentAddress", e.target.value)}
-                      rows={2}
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="+1 (555) 123-4567"
+                        value={formData.phone}
+                        onChange={(e) => handleInputChange("phone", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Address</Label>
+                      <Input
+                        id="address"
+                        placeholder="Your current address"
+                        value={formData.address}
+                        onChange={(e) => handleInputChange("address", e.target.value)}
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -322,121 +346,16 @@ export default function SignupPage() {
 
                   {formData.role === "refugee" && (
                     <div className="space-y-4 border-t pt-4">
-                      <h3 className="text-lg font-semibold">Refugee Information</h3>
+                      <h3 className="text-lg font-semibold">Additional Information</h3>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                          <Input
-                            id="dateOfBirth"
-                            type="date"
-                            value={formData.dateOfBirth}
-                            onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="gender">Gender</Label>
-                          <Select
-                            value={formData.gender}
-                            onValueChange={(value) => handleInputChange("gender", value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select gender" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="male">Male</SelectItem>
-                              <SelectItem value="female">Female</SelectItem>
-                              <SelectItem value="other">Other</SelectItem>
-                              <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
                       <div className="space-y-2">
-                        <Label htmlFor="identificationNumber">Identification Number</Label>
+                        <Label htmlFor="languages">Languages Spoken</Label>
                         <Input
-                          id="identificationNumber"
-                          placeholder="Government ID or refugee registration number"
-                          value={formData.identificationNumber}
-                          onChange={(e) => handleInputChange("identificationNumber", e.target.value)}
+                          id="languages"
+                          placeholder="English, Arabic, French (comma-separated)"
+                          value={formData.languages}
+                          onChange={(e) => handleInputChange("languages", e.target.value)}
                         />
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="emergencyContactName">Emergency Contact Name</Label>
-                          <Input
-                            id="emergencyContactName"
-                            placeholder="Emergency contact person"
-                            value={formData.emergencyContactName}
-                            onChange={(e) => handleInputChange("emergencyContactName", e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="emergencyContactPhone">Emergency Contact Phone</Label>
-                          <Input
-                            id="emergencyContactPhone"
-                            type="tel"
-                            placeholder="Emergency contact phone"
-                            value={formData.emergencyContactPhone}
-                            onChange={(e) => handleInputChange("emergencyContactPhone", e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="bloodType">Blood Type</Label>
-                          <Select
-                            value={formData.bloodType}
-                            onValueChange={(value) => handleInputChange("bloodType", value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select blood type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="A+">A+</SelectItem>
-                              <SelectItem value="A-">A-</SelectItem>
-                              <SelectItem value="B+">B+</SelectItem>
-                              <SelectItem value="B-">B-</SelectItem>
-                              <SelectItem value="AB+">AB+</SelectItem>
-                              <SelectItem value="AB-">AB-</SelectItem>
-                              <SelectItem value="O+">O+</SelectItem>
-                              <SelectItem value="O-">O-</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="medicalConditions">Medical Conditions</Label>
-                          <Input
-                            id="medicalConditions"
-                            placeholder="Diabetes, Hypertension, etc. (comma-separated)"
-                            value={formData.medicalConditions}
-                            onChange={(e) => handleInputChange("medicalConditions", e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="allergies">Allergies</Label>
-                          <Input
-                            id="allergies"
-                            placeholder="Food, medication allergies (comma-separated)"
-                            value={formData.allergies}
-                            onChange={(e) => handleInputChange("allergies", e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="disabilities">Disabilities</Label>
-                          <Input
-                            id="disabilities"
-                            placeholder="Physical, mental disabilities (comma-separated)"
-                            value={formData.disabilities}
-                            onChange={(e) => handleInputChange("disabilities", e.target.value)}
-                          />
-                        </div>
                       </div>
                     </div>
                   )}
@@ -445,117 +364,61 @@ export default function SignupPage() {
                     <div className="space-y-4 border-t pt-4">
                       <h3 className="text-lg font-semibold">Organization Information</h3>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="organization">Organization Name</Label>
-                          <Input
-                            id="organization"
-                            placeholder="Your organization name"
-                            value={formData.organization}
-                            onChange={(e) => handleInputChange("organization", e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="registrationNumber">Registration Number</Label>
-                          <Input
-                            id="registrationNumber"
-                            placeholder="Official registration number"
-                            value={formData.registrationNumber}
-                            onChange={(e) => handleInputChange("registrationNumber", e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="website">Website</Label>
-                          <Input
-                            id="website"
-                            type="url"
-                            placeholder="https://yourorganization.com"
-                            value={formData.website}
-                            onChange={(e) => handleInputChange("website", e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="yearsOfOperation">Years of Operation</Label>
-                          <Input
-                            id="yearsOfOperation"
-                            type="number"
-                            min="0"
-                            placeholder="Number of years in operation"
-                            value={formData.yearsOfOperation}
-                            onChange={(e) => handleInputChange("yearsOfOperation", e.target.value)}
-                          />
-                        </div>
-                      </div>
-
                       <div className="space-y-2">
-                        <Label htmlFor="description">Organization Description</Label>
-                        <Textarea
-                          id="description"
-                          placeholder="Brief description of your organization and mission"
-                          value={formData.description}
-                          onChange={(e) => handleInputChange("description", e.target.value)}
-                          rows={3}
+                        <Label htmlFor="organizationName">Organization Name</Label>
+                        <Input
+                          id="organizationName"
+                          placeholder="Your organization name"
+                          value={formData.organizationName}
+                          onChange={(e) => handleInputChange("organizationName", e.target.value)}
+                          required
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="contactPersonName">Contact Person Name</Label>
-                          <Input
-                            id="contactPersonName"
-                            placeholder="Primary contact person"
-                            value={formData.contactPersonName}
-                            onChange={(e) => handleInputChange("contactPersonName", e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="contactPersonPhone">Contact Person Phone</Label>
-                          <Input
-                            id="contactPersonPhone"
-                            type="tel"
-                            placeholder="Contact person phone"
-                            value={formData.contactPersonPhone}
-                            onChange={(e) => handleInputChange("contactPersonPhone", e.target.value)}
-                          />
-                        </div>
-                      </div>
-
                       <div className="space-y-2">
-                        <Label htmlFor="specialization">Primary Specialization</Label>
-                        <Select
-                          value={formData.specialization}
-                          onValueChange={(value) => handleInputChange("specialization", value)}
-                        >
+                        <Label htmlFor="ngoType">NGO Type</Label>
+                        <Select value={formData.ngoType} onValueChange={(value) => handleInputChange("ngoType", value)}>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select primary specialization" />
+                            <SelectValue placeholder="Select NGO type" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="general">General Medicine</SelectItem>
-                            <SelectItem value="pediatrics">Pediatrics</SelectItem>
-                            <SelectItem value="emergency">Emergency Medicine</SelectItem>
-                            <SelectItem value="mental">Mental Health</SelectItem>
-                            <SelectItem value="maternal">Maternal Health</SelectItem>
-                            <SelectItem value="pharmacy">Pharmacy</SelectItem>
-                            <SelectItem value="dental">Dental Care</SelectItem>
-                            <SelectItem value="surgery">Surgery</SelectItem>
-                            <SelectItem value="rehabilitation">Rehabilitation</SelectItem>
-                            <SelectItem value="nutrition">Nutrition</SelectItem>
+                            <SelectItem value="International NGO">International NGO</SelectItem>
+                            <SelectItem value="Local NGO">Local NGO</SelectItem>
+                            <SelectItem value="Faith-based NGO">Faith-based NGO</SelectItem>
+                            <SelectItem value="Government NGO">Government NGO</SelectItem>
+                            <SelectItem value="Private NGO">Private NGO</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="servicesOffered">Services Offered</Label>
-                        <Textarea
-                          id="servicesOffered"
-                          placeholder="List services offered (comma-separated): e.g., Primary care, Vaccinations, Health education"
-                          value={formData.servicesOffered}
-                          onChange={(e) => handleInputChange("servicesOffered", e.target.value)}
-                          rows={2}
+                        <Label htmlFor="services">Services Offered</Label>
+                        <Input
+                          id="services"
+                          placeholder="medical aid, emergency response, trauma care (comma-separated)"
+                          value={formData.services}
+                          onChange={(e) => handleInputChange("services", e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="contact">Contact Number</Label>
+                        <Input
+                          id="contact"
+                          type="tel"
+                          placeholder="+91-80-1234567"
+                          value={formData.contact}
+                          onChange={(e) => handleInputChange("contact", e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="availability">Availability</Label>
+                        <Input
+                          id="availability"
+                          placeholder="24/7, Mon-Fri 9AM-5PM, Emergency only"
+                          value={formData.availability}
+                          onChange={(e) => handleInputChange("availability", e.target.value)}
                         />
                       </div>
                     </div>
@@ -586,6 +449,60 @@ export default function SignupPage() {
           </Button>
         </div>
       </motion.div>
+
+      {/* Unique ID Modal */}
+      {showUniqueId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-lg max-w-md w-full p-6"
+          >
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Heart className="w-8 h-8 text-green-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Registration Successful!</h2>
+              <p className="text-gray-600 mb-4">
+                Your unique HealthBridge ID has been generated. Please save this ID safely as it will be used for all your medical records.
+              </p>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-blue-800 font-medium mb-2">Your Unique HealthBridge ID:</p>
+                <p className="text-2xl font-bold text-blue-900 font-mono">{generatedUniqueId}</p>
+              </div>
+              
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
+                <p className="text-sm text-yellow-800">
+                  <strong>Important:</strong> Please save this ID in a safe place. You'll need it to access your medical records and for all future healthcare services.
+                </p>
+              </div>
+              
+              <div className="flex space-x-3">
+                <Button
+                  onClick={() => {
+                    navigator.clipboard.writeText(generatedUniqueId);
+                    alert('ID copied to clipboard!');
+                  }}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Copy ID
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowUniqueId(false);
+                    router.push('/auth/login?registered=true&role=' + formData.role);
+                  }}
+                  className="flex-1"
+                >
+                  Continue to Login
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }
