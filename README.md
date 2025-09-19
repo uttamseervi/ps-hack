@@ -4,6 +4,9 @@ HealthBridge is an AI‑assisted healthcare access platform designed to support 
 
 > Important: This project is an early prototype intended for hackathon/demo purposes only. It does not provide medical advice. Always consult qualified professionals for diagnosis and treatment.
 
+##Deployed Link
+https://final-deploy-ps.vercel.app/
+
 ## Features
 
 - Multilingual AI Chatbot: Text + image triage
@@ -161,5 +164,6 @@ Response shape (example):
 ## License
 
 No license specified. All rights reserved by the authors. If you plan to use this project, add an appropriate license file.
+
 
 
